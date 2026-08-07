@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="一条 PowerShell 命令，为 Linux 或 Windows SSH 服务器配置密钥登录。">
+  <title>SSH Key Installer</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="SSH Key Installer 首页">
+      <span class="brand-mark"><i data-lucide="key-round"></i></span>
+      <span>SSH Key Installer</span>
+    </a>
+    <a class="icon-link" href="https://github.com/guajun/ssh-key-installer" aria-label="查看 GitHub 仓库" title="GitHub 仓库">
+      <i data-lucide="github"></i>
+    </a>
+  </header>
+
+  <main>
+    <section class="intro">
+      <p class="eyebrow">Windows OpenSSH</p>
+      <h1>一条命令，配好 SSH 密钥登录</h1>
+      <p class="lede">把当前 Windows 用户的公钥安装到 Linux 或 Windows 服务器。支持跳板机、SSH 配置别名和非标准端口。</p>
+
+      <div class="command-shell" aria-label="安装命令">
+        <div class="terminal-bar">
+          <span>PowerShell 5.1+</span>
+          <span class="status"><span class="status-dot"></span>交互式</span>
+        </div>
+        <div class="command-row">
+          <code id="install-command">irm https://guajun.github.io/ssh-key-installer/install.ps1 | iex</code>
+          <button id="copy-button" type="button" title="复制命令">
+            <i data-lucide="copy"></i>
+            <span>复制</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="steps" aria-labelledby="steps-title">
+      <h2 id="steps-title">运行后只需三步</h2>
+      <ol>
+        <li><span>01</span><strong>输入目标</strong><p>例如 <code>root@192.168.1.1</code> 或 SSH Host 别名。</p></li>
+        <li><span>02</span><strong>选择系统</strong><p>Linux 或 Windows；也可以让脚本自动检测。</p></li>
+        <li><span>03</span><strong>输入密码</strong><p>密码由系统 SSH 直接读取，脚本不会接触或保存。</p></li>
+      </ol>
+    </section>
+
+    <section class="details" aria-labelledby="details-title">
+      <div>
+        <p class="eyebrow">可检查、可验证</p>
+        <h2 id="details-title">私钥始终留在本机</h2>
+      </div>
+      <div class="detail-copy">
+        <p>脚本仅向远端发送公钥，保留 SSH 主机指纹检查，并在安装后使用纯密钥模式验证登录。</p>
+        <p>敏感环境可先下载并检查脚本，再对照 Release 中的 SHA-256。</p>
+        <div class="actions">
+          <a href="install.ps1" download><i data-lucide="download"></i>下载脚本</a>
+          <a href="https://github.com/guajun/ssh-key-installer/releases/latest"><i data-lucide="badge-check"></i>Release 与校验值</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>MIT License</span>
+    <span>Linux / Windows OpenSSH</span>
+  </footer>
+
+  <div id="toast" role="status" aria-live="polite">命令已复制</div>
+</body>
+</html>
