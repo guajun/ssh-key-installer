@@ -30,11 +30,10 @@ if (-not $page.Contains($installCommand)) {
 if ($script -match 'IdentityFile\s+\S+\.pub') {
     throw 'The script must never pass a public key path as IdentityFile.'
 }
-foreach ($marker in @('SSH_KEY_INSTALLER_OK=Linux', 'SSH_KEY_INSTALLER_OK=Windows', 'BatchMode=yes')) {
+foreach ($marker in @('SSH_KEY_INSTALLER_OK=Linux', 'SSH_KEY_INSTALLER_OK=Windows', '/etc/dropbear/authorized_keys', 'BatchMode=yes')) {
     if (-not $script.Contains($marker)) {
         throw "Expected behavior marker is missing: $marker"
     }
 }
 
 Write-Output 'REPOSITORY_TESTS_OK'
-

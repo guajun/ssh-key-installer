@@ -11,6 +11,7 @@ The script prompts for the SSH destination and remote operating system. Password
 ## Features
 
 - Linux targets: safely updates `~/.ssh/authorized_keys` and permissions.
+- OpenWrt/Dropbear targets: automatically uses `/etc/dropbear/authorized_keys` for root.
 - Windows targets: updates the user key file and, for administrators, `administrators_authorized_keys` with the ACLs required by Windows OpenSSH.
 - Works with SSH config aliases, custom ports, and `ProxyJump`.
 - Uses an existing Ed25519 identity or creates one after confirmation.
@@ -68,4 +69,3 @@ Tagged releases attach `install-ssh-key.ps1` and `SHA256SUMS.txt`. GitHub Pages 
 ## License
 
 MIT
-

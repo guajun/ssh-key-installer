@@ -120,12 +120,20 @@ function Install-LinuxKey([string[]]$SshArguments, [string]$PublicKey) {
 set -eu
 umask 077
 key=`$(printf '%s' '$keyBase64' | base64 -d)
-mkdir -p "`$HOME/.ssh"
-touch "`$HOME/.ssh/authorized_keys"
-chmod 700 "`$HOME/.ssh"
-chmod 600 "`$HOME/.ssh/authorized_keys"
-grep -qxF "`$key" "`$HOME/.ssh/authorized_keys" || printf '%s\n' "`$key" >> "`$HOME/.ssh/authorized_keys"
+if [ "`$(id -u)" = '0' ] && { [ -d /etc/dropbear ] || command -v dropbear >/dev/null 2>&1; }; then
+    key_dir=/etc/dropbear
+    key_file=/etc/dropbear/authorized_keys
+else
+    key_dir="`$HOME/.ssh"
+    key_file="`$HOME/.ssh/authorized_keys"
+fi
+mkdir -p "`$key_dir"
+touch "`$key_file"
+chmod 700 "`$key_dir"
+chmod 600 "`$key_file"
+grep -qxF "`$key" "`$key_file" || printf '%s\n' "`$key" >> "`$key_file"
 printf '%s\n' 'SSH_KEY_INSTALLER_OK=Linux'
+printf 'SSH_KEY_INSTALLER_PATH=%s\n' "`$key_file"
 "@
     # Encoding the complete script avoids Windows-to-POSIX command-line quoting differences.
     $scriptBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($remoteScript))
