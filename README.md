@@ -14,7 +14,8 @@ The script prompts for the SSH destination and remote operating system. Password
 - OpenWrt/Dropbear targets: automatically uses `/etc/dropbear/authorized_keys` for root.
 - Windows targets: updates the user key file and, for administrators, `administrators_authorized_keys` with the ACLs required by Windows OpenSSH.
 - Works with SSH config aliases, custom ports, and `ProxyJump`.
-- Uses an existing Ed25519 identity or creates one after confirmation.
+- Reuses identities from the effective SSH config, including existing Ed25519, ECDSA, RSA, and custom key files.
+- Creates a new Ed25519 identity after confirmation only when no usable private key exists.
 - Idempotent: an existing key is not duplicated.
 - Verifies key-only login after installation.
 

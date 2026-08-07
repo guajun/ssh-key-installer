@@ -21,7 +21,7 @@ param(
 
     [string]$ProxyJump,
 
-    [string]$IdentityFile = (Join-Path $HOME '.ssh\id_ed25519')
+    [string]$IdentityFile
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,13 +31,64 @@ function Write-Step([string]$Message) {
 }
 
 function Resolve-IdentityPath([string]$Path) {
+    $Path = $Path.Trim().Trim('"')
     if ($Path.StartsWith('~')) {
         return Join-Path $HOME $Path.Substring(1).TrimStart('\', '/')
     }
     return [Environment]::ExpandEnvironmentVariables($Path)
 }
 
+function Find-LocalIdentity {
+    $configArguments = @('-G', '-p', $Port.ToString())
+    if ($ProxyJump) {
+        $configArguments += @('-J', $ProxyJump)
+    }
+
+    $candidates = @()
+    try {
+        $effectiveConfig = & ssh @configArguments $Destination 2>$null
+        $candidates += $effectiveConfig | ForEach-Object {
+            if ($_ -match '^identityfile\s+(.+)$') {
+                $Matches[1]
+            }
+        }
+    } catch {
+        # Standard identity discovery below still works if ssh -G is unavailable.
+    }
+
+    $candidates += @(
+        (Join-Path $HOME '.ssh\id_ed25519'),
+        (Join-Path $HOME '.ssh\id_ecdsa'),
+        (Join-Path $HOME '.ssh\id_rsa')
+    )
+
+    $seen = @{}
+    foreach ($candidate in $candidates) {
+        if (-not $candidate -or $candidate -eq 'none' -or $candidate.EndsWith('.pub')) {
+            continue
+        }
+        $resolved = Resolve-IdentityPath $candidate
+        $key = $resolved.ToLowerInvariant()
+        if (-not $seen.ContainsKey($key)) {
+            $seen[$key] = $true
+            if (Test-Path -LiteralPath $resolved -PathType Leaf) {
+                return $resolved
+            }
+        }
+    }
+
+    return $null
+}
+
 function Ensure-LocalIdentity([string]$PrivateKeyPath) {
+    if ($PrivateKeyPath.EndsWith('.pub')) {
+        $matchingPrivateKey = $PrivateKeyPath.Substring(0, $PrivateKeyPath.Length - 4)
+        if (Test-Path -LiteralPath $matchingPrivateKey -PathType Leaf) {
+            Write-Host "Using the private key that matches '$PrivateKeyPath'." -ForegroundColor Yellow
+        }
+        $PrivateKeyPath = $matchingPrivateKey
+    }
+
     $publicKeyPath = "$PrivateKeyPath.pub"
     $keyDirectory = Split-Path -Parent $PrivateKeyPath
 
@@ -200,7 +251,14 @@ if (-not $TargetOS) {
     }
 }
 
-$IdentityFile = Resolve-IdentityPath $IdentityFile
+$IdentityFile = if ($IdentityFile) {
+    Resolve-IdentityPath $IdentityFile
+} else {
+    Find-LocalIdentity
+}
+if (-not $IdentityFile) {
+    $IdentityFile = Join-Path $HOME '.ssh\id_ed25519'
+}
 $identity = Ensure-LocalIdentity $IdentityFile
 $sshArguments = New-SshArguments $identity.Private
 
