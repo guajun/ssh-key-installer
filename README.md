@@ -15,7 +15,8 @@ The script prompts for the SSH destination and remote operating system. Password
 - Windows targets: updates the user key file and, for administrators, `administrators_authorized_keys` with the ACLs required by Windows OpenSSH.
 - Works with SSH config aliases, custom ports, and `ProxyJump`.
 - Reuses identities from the effective SSH config, including existing Ed25519, ECDSA, RSA, and custom key files.
-- Creates a new Ed25519 identity after confirmation only when no usable private key exists.
+- When discovery finds no usable identity, interactively accepts an existing private key path or creates a new Ed25519 key after confirmation.
+- Keeps `-IdentityFile` available for non-interactive and scripted use.
 - Idempotent: an existing key is not duplicated.
 - Verifies key-only login after installation.
 

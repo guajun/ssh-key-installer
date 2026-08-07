@@ -30,7 +30,7 @@ if (-not $page.Contains($installCommand)) {
 if ($script -match 'IdentityFile\s+\S+\.pub') {
     throw 'The script must never pass a public key path as IdentityFile.'
 }
-foreach ($marker in @('Find-LocalIdentity', '.ssh\id_rsa', 'SSH_KEY_INSTALLER_OK=Linux', 'SSH_KEY_INSTALLER_OK=Windows', '/etc/dropbear/authorized_keys', 'BatchMode=yes')) {
+foreach ($marker in @('Find-LocalIdentity', 'Read-IdentityPath', '.ssh\id_rsa', 'SSH_KEY_INSTALLER_OK=Linux', 'SSH_KEY_INSTALLER_OK=Windows', '/etc/dropbear/authorized_keys', 'BatchMode=yes')) {
     if (-not $script.Contains($marker)) {
         throw "Expected behavior marker is missing: $marker"
     }

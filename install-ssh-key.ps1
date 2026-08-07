@@ -80,6 +80,31 @@ function Find-LocalIdentity {
     return $null
 }
 
+function Read-IdentityPath {
+    $defaultPath = Join-Path $HOME '.ssh\id_ed25519'
+    Write-Host "No usable SSH private key was found in the effective SSH config or '$HOME\.ssh'." -ForegroundColor Yellow
+
+    while ($true) {
+        $answer = Read-Host "Existing private key path (press Enter to create '$defaultPath')"
+        if (-not $answer) {
+            return $defaultPath
+        }
+
+        $resolved = Resolve-IdentityPath $answer
+        $privateCandidate = if ($resolved.EndsWith('.pub')) {
+            $resolved.Substring(0, $resolved.Length - 4)
+        } else {
+            $resolved
+        }
+
+        if (Test-Path -LiteralPath $privateCandidate -PathType Leaf) {
+            return $resolved
+        }
+
+        Write-Host "Private key not found: $privateCandidate" -ForegroundColor Yellow
+    }
+}
+
 function Ensure-LocalIdentity([string]$PrivateKeyPath) {
     if ($PrivateKeyPath.EndsWith('.pub')) {
         $matchingPrivateKey = $PrivateKeyPath.Substring(0, $PrivateKeyPath.Length - 4)
@@ -257,7 +282,7 @@ $IdentityFile = if ($IdentityFile) {
     Find-LocalIdentity
 }
 if (-not $IdentityFile) {
-    $IdentityFile = Join-Path $HOME '.ssh\id_ed25519'
+    $IdentityFile = Read-IdentityPath
 }
 $identity = Ensure-LocalIdentity $IdentityFile
 $sshArguments = New-SshArguments $identity.Private
