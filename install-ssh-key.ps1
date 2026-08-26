@@ -268,11 +268,11 @@ if (-not $Destination -or $Destination -match '\s') {
 }
 
 if (-not $TargetOS) {
-    $choice = Read-Host 'Remote OS: [L]inux, [W]indows, or [A]uto-detect? [L]'
+    $choice = Read-Host 'Remote OS: [L]inux, [W]indows, or [A]uto-detect? [A]'
     switch -Regex ($choice) {
         '^(?i)w' { $TargetOS = 'Windows' }
-        '^(?i)a' { $TargetOS = 'Auto' }
-        default  { $TargetOS = 'Linux' }
+        '^(?i)l' { $TargetOS = 'Linux' }
+        default  { $TargetOS = 'Auto' }
     }
 }
 

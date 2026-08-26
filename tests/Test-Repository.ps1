@@ -35,5 +35,11 @@ foreach ($marker in @('Find-LocalIdentity', 'Read-IdentityPath', '.ssh\id_rsa', 
         throw "Expected behavior marker is missing: $marker"
     }
 }
+if (-not $script.Contains("[A]uto-detect? [A]'")) {
+    throw 'Interactive target OS selection must default to Auto-detect.'
+}
+if (-not $script.Contains("default  { `$TargetOS = 'Auto' }")) {
+    throw 'Empty target OS input must select Auto.'
+}
 
 Write-Output 'REPOSITORY_TESTS_OK'

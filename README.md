@@ -6,7 +6,7 @@ Install your Windows SSH public key on a Linux or Windows OpenSSH server with on
 irm https://guajun.github.io/ssh-key-installer/install.ps1 | iex
 ```
 
-The script prompts for the SSH destination and remote operating system. Password input is handled directly by `ssh`; the script never reads or stores it.
+The script prompts for the SSH destination and remote operating system, defaulting to automatic OS detection. Password input is handled directly by `ssh`; the script never reads or stores it.
 
 ## Features
 
@@ -48,7 +48,7 @@ Explicit jump host and port:
 .\install-ssh-key.ps1 -Destination user@server -TargetOS Linux -Port 2222 -ProxyJump root@jump.example.com
 ```
 
-Use `-TargetOS Auto` only when needed. Detection makes an additional SSH connection and can therefore ask for the password twice.
+Automatic OS detection makes an additional SSH connection and can therefore ask for the password twice. Pass `-TargetOS Linux` or `-TargetOS Windows` to skip detection when the target OS is known.
 
 ## Requirements
 
