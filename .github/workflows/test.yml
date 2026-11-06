@@ -17,3 +17,11 @@ jobs:
         shell: powershell
         run: .\tests\Test-Repository.ps1
 
+  posix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check POSIX syntax (dash)
+        run: dash -n install-ssh-key.sh
+      - name: Run POSIX repository checks
+        run: sh tests/Test-Repository.sh

@@ -1,0 +1,2 @@
+# Keep POSIX shell scripts with LF endings: a CRLF shebang breaks "curl | sh".
+*.sh text eol=lf

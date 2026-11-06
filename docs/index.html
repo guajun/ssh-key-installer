@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="一条 PowerShell 命令，为 Linux 或 Windows SSH 服务器配置密钥登录。">
+  <meta name="description" content="一条 PowerShell 或 sh 命令，为 Linux 或 Windows SSH 服务器配置密钥登录。">
   <title>SSH Key Installer</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="styles.css?v=2">
+  <link rel="stylesheet" href="styles.css?v=3">
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
   <script src="app.js" defer></script>
 </head>
@@ -23,13 +23,28 @@
 
   <main>
     <section class="intro">
-      <p class="eyebrow">Windows · OpenSSH</p>
+      <p class="eyebrow">PowerShell · sh · OpenSSH</p>
       <h1>一行命令，<span>配置 SSH 密钥登录</span></h1>
-      <p class="lede">将当前 Windows 用户的公钥安装到 Linux、OpenWrt 或 Windows 主机。支持跳板机、SSH Host 别名和自定义端口。</p>
+      <p class="lede">将当前设备的公钥安装到 Linux、OpenWrt 或 Windows 主机。Windows 用 PowerShell 脚本，Termux、macOS 和 Linux 用 sh 脚本。均支持跳板机、SSH Host 别名和自定义端口。</p>
+
+      <div class="client-switch" role="tablist" aria-label="选择客户端">
+        <button class="client-tab is-active" type="button" role="tab" aria-selected="true"
+                data-command="irm https://guajun.github.io/ssh-key-installer/install.ps1 | iex"
+                data-runtime="PowerShell 5.1+" data-script="install.ps1">
+          <strong>Windows · PowerShell</strong>
+          <span>install.ps1</span>
+        </button>
+        <button class="client-tab" type="button" role="tab" aria-selected="false"
+                data-command="curl -fsSL https://guajun.github.io/ssh-key-installer/install.sh | sh"
+                data-runtime="sh · POSIX" data-script="install.sh">
+          <strong>Termux · macOS · Linux</strong>
+          <span>install.sh</span>
+        </button>
+      </div>
 
       <div class="command-shell" aria-label="安装命令">
         <div class="terminal-bar">
-          <span>PowerShell 5.1+</span>
+          <span id="runtime-label">PowerShell 5.1+</span>
           <span class="status"><span class="status-dot"></span>交互式</span>
         </div>
         <div class="command-row">
@@ -60,7 +75,8 @@
         <p>脚本仅向远端发送公钥，保留 SSH 主机指纹检查，并在安装后使用纯密钥模式验证登录。</p>
         <p>敏感环境可先下载并检查脚本，再对照 Release 中的 SHA-256。</p>
         <div class="actions">
-          <a href="install.ps1" download><i data-lucide="download"></i>下载脚本</a>
+          <a id="download-link" href="install.ps1" download><i data-lucide="download"></i><span id="download-label">下载 install.ps1</span></a>
+          <a href="install.sh" download><i data-lucide="download"></i>下载 install.sh</a>
           <a href="https://github.com/guajun/ssh-key-installer/releases/latest"><i data-lucide="badge-check"></i>Release 与校验值</a>
         </div>
       </div>
@@ -69,7 +85,7 @@
 
   <footer>
     <span>MIT License</span>
-    <span>Linux / Windows OpenSSH</span>
+    <span>PowerShell 5.1+ / POSIX sh · Linux / Windows OpenSSH</span>
   </footer>
 
   <div id="toast" role="status" aria-live="polite">命令已复制</div>
