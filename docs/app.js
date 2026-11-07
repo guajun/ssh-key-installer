@@ -1,10 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-  if (window.lucide) {
-    window.lucide.createIcons();
-  }
-
   const commandCode = document.querySelector('#install-command');
-  const commandRow = document.querySelector('.command-row');
   const runtimeLabel = document.querySelector('#runtime-label');
   const downloadLink = document.querySelector('#download-link');
   const downloadLabel = document.querySelector('#download-label');
@@ -36,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
       await navigator.clipboard.writeText(command);
     } catch {
       const range = document.createRange();
-      range.selectNodeContents(commandRow);
+      range.selectNodeContents(commandCode);
       const selection = window.getSelection();
       selection.removeAllRanges();
       selection.addRange(range);
