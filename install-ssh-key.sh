@@ -14,7 +14,7 @@ set -eu
 PROGRAM='SSH Key Installer'
 DESTINATION=''
 TARGET_OS=''
-PORT=22
+PORT=''
 PROXY_JUMP=''
 IDENTITY=''
 
@@ -38,7 +38,7 @@ Usage: install-ssh-key.sh [options]
 
   -d DESTINATION   SSH destination, for example root@192.168.1.1 or a Host alias
   -o OS            target OS: linux, windows, or auto (default: ask)
-  -p PORT          SSH port (default: 22)
+  -p PORT          SSH port (default: SSH config, otherwise 22)
   -J JUMP          ProxyJump destination
   -i IDENTITY      private key to use (default: discover from the SSH config)
   -h               show this help
@@ -87,11 +87,13 @@ case $TARGET_OS in
     *) die "unsupported target OS: $TARGET_OS (use linux, windows, or auto)" ;;
 esac
 
-case $PORT in
-    ''|*[!0-9]*) die "invalid port: $PORT" ;;
-esac
-if [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
-    die "invalid port: $PORT"
+if [ -n "$PORT" ]; then
+    case $PORT in
+        *[!0-9]*) die "invalid port: $PORT" ;;
+    esac
+    if [ "$PORT" -lt 1 ] || [ "$PORT" -gt 65535 ]; then
+        die "invalid port: $PORT"
+    fi
 fi
 
 for tool in ssh ssh-keygen base64; do
@@ -127,12 +129,18 @@ resolve_identity_path() {
     printf '%s' "$_path"
 }
 
-effective_ssh_config() {
-    if [ -n "$PROXY_JUMP" ]; then
-        ssh -G -p "$PORT" -J "$PROXY_JUMP" "$DESTINATION" 2>/dev/null || true
-    else
-        ssh -G -p "$PORT" "$DESTINATION" 2>/dev/null || true
+ssh_with_options() {
+    if [ -n "$PORT" ]; then
+        set -- -p "$PORT" "$@"
     fi
+    if [ -n "$PROXY_JUMP" ]; then
+        set -- -J "$PROXY_JUMP" "$@"
+    fi
+    ssh "$@"
+}
+
+effective_ssh_config() {
+    ssh_with_options -G "$DESTINATION" 2>/dev/null || true
 }
 
 find_identity() {
@@ -221,24 +229,16 @@ fi
 
 PUBLIC_KEY=$(tr -d '\r' < "$PUBLIC_KEY_PATH" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')
 case $PUBLIC_KEY in
-    ssh-ed25519\ *|ssh-rsa\ *|ssh-ecdsa-*\ *|ssh-dss\ *) ;;
+    ssh-ed25519\ *|ssh-rsa\ *|ecdsa-sha2-*\ *|ssh-dss\ *) ;;
     *) die "'$PUBLIC_KEY_PATH' does not contain a supported OpenSSH public key" ;;
 esac
 
 run_ssh() {
-    if [ -n "$PROXY_JUMP" ]; then
-        ssh -p "$PORT" -i "$IDENTITY" -o IdentitiesOnly=yes -J "$PROXY_JUMP" "$DESTINATION" "$1"
-    else
-        ssh -p "$PORT" -i "$IDENTITY" -o IdentitiesOnly=yes "$DESTINATION" "$1"
-    fi
+    ssh_with_options -i "$IDENTITY" -o IdentitiesOnly=yes "$DESTINATION" "$1"
 }
 
 verify_ssh() {
-    if [ -n "$PROXY_JUMP" ]; then
-        ssh -p "$PORT" -i "$IDENTITY" -o IdentitiesOnly=yes -J "$PROXY_JUMP" -o BatchMode=yes -o ConnectTimeout=10 "$DESTINATION" 'echo SSH_KEY_LOGIN_OK'
-    else
-        ssh -p "$PORT" -i "$IDENTITY" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10 "$DESTINATION" 'echo SSH_KEY_LOGIN_OK'
-    fi
+    ssh_with_options -i "$IDENTITY" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10 "$DESTINATION" 'echo SSH_KEY_LOGIN_OK'
 }
 
 detect_target_os() {
@@ -273,7 +273,12 @@ mkdir -p "\$key_dir"
 touch "\$key_file"
 chmod 700 "\$key_dir"
 chmod 600 "\$key_file"
-grep -qxF "\$key" "\$key_file" || printf '%s\n' "\$key" >> "\$key_file"
+if ! grep -qxF "\$key" "\$key_file"; then
+    if [ -s "\$key_file" ] && [ -n "\$(tail -c 1 "\$key_file")" ]; then
+        printf '\n' >> "\$key_file"
+    fi
+    printf '%s\n' "\$key" >> "\$key_file"
+fi
 printf '%s\n' 'SSH_KEY_INSTALLER_OK=Linux'
 printf 'SSH_KEY_INSTALLER_PATH=%s\n' "\$key_file"
 EOF

@@ -62,7 +62,16 @@ ssh-keygen -q -t ed25519 -N '' -C 'test@installer' -f "$tmp/home/.ssh/id_ed25519
 
 cat > "$tmp/bin/ssh" <<'STUB'
 #!/bin/sh
-if [ "$1" = "-G" ]; then
+config=false
+port=''
+previous=''
+for argument in "$@"; do
+    [ "$argument" != '-G' ] || config=true
+    [ "$previous" != '-p' ] || port=$argument
+    previous=$argument
+done
+[ "$port" = "${STUB_EXPECT_PORT:-}" ] || exit 91
+if [ "$config" = true ]; then
     printf 'hostname stub.invalid\n'
     printf 'identityfile %s\n' "$STUB_IDENTITY"
     exit 0
@@ -120,6 +129,37 @@ embedded_key=$(printf '%s' "$linux_payload" | base64 -d | sed -nE "s/.*printf '%
 if [ "$(printf '%s' "$embedded_key" | base64 -d)" != "$expected_key" ]; then
     fail 'the Linux payload does not carry the public key of the local identity'
 fi
+
+# Exercise port propagation through discovery, installation, and verification.
+STUB_EXPECT_PORT=2222 sh "$sh_script" -d test@stub -o linux -p 2222 -J jump@stub \
+    >/dev/null 2>&1 || fail 'explicit port was not propagated'
+
+# Every standard ECDSA curve must pass validation with a real generated key.
+for bits in 256 384 521; do
+    ssh-keygen -q -t ecdsa -b "$bits" -N '' -f "$tmp/ecdsa-$bits"
+    sh "$sh_script" -d test@stub -o linux -i "$tmp/ecdsa-$bits" \
+        >/dev/null 2>&1 || fail "ECDSA $bits key was rejected"
+done
+
+# Execute the actual decoded remote payload in an isolated home. Stub id so
+# running the tests as root never selects the real /etc/dropbear directory.
+cat > "$tmp/bin/id" <<'ID'
+#!/bin/sh
+printf '1000\n'
+ID
+chmod +x "$tmp/bin/id"
+mkdir -p "$tmp/remote/.ssh"
+auth="$tmp/remote/.ssh/authorized_keys"
+printf 'ssh-ed25519 OLD old' > "$auth"
+HOME="$tmp/remote" sh "$tmp/linux.sh" >/dev/null
+printf 'ssh-ed25519 OLD old\n%s\n' "$expected_key" > "$tmp/expected"
+cmp "$auth" "$tmp/expected" || fail 'Linux payload did not repair the missing newline'
+HOME="$tmp/remote" sh "$tmp/linux.sh" >/dev/null
+cmp "$auth" "$tmp/expected" || fail 'Linux payload duplicated an existing key'
+: > "$auth"
+HOME="$tmp/remote" sh "$tmp/linux.sh" >/dev/null
+printf '%s\n' "$expected_key" > "$tmp/expected"
+cmp "$auth" "$tmp/expected" || fail 'Linux payload added an empty first line'
 
 printf 'Behaviour checks passed\n'
 printf 'POSIX_TESTS_OK\n'
