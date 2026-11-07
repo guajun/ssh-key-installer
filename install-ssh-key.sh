@@ -81,7 +81,8 @@ while getopts ':d:o:p:J:i:h' option; do
 done
 
 case $TARGET_OS in
-    ''|auto|Auto|AUTO) TARGET_OS='' ;;
+    '') TARGET_OS='' ;;
+    auto|Auto|AUTO) TARGET_OS='Auto' ;;
     linux|Linux|LINUX) TARGET_OS='Linux' ;;
     windows|Windows|WINDOWS) TARGET_OS='Windows' ;;
     *) die "unsupported target OS: $TARGET_OS (use linux, windows, or auto)" ;;
@@ -140,7 +141,7 @@ ssh_with_options() {
 }
 
 effective_ssh_config() {
-    ssh_with_options -G "$DESTINATION" 2>/dev/null || true
+    ssh_with_options -G "$DESTINATION" </dev/null 2>/dev/null || true
 }
 
 find_identity() {
@@ -238,13 +239,14 @@ run_ssh() {
 }
 
 verify_ssh() {
-    ssh_with_options -i "$IDENTITY" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10 "$DESTINATION" 'echo SSH_KEY_LOGIN_OK'
+    ssh_with_options -i "$IDENTITY" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=10 "$DESTINATION" 'echo SSH_KEY_LOGIN_OK' </dev/null
 }
 
 detect_target_os() {
     step 'Detecting the remote operating system (this may ask for the password once)'
     # cmd expands %OS%; PowerShell expands $env:OS; only one of them is meaningful.
-    _probe=$(run_ssh 'echo __SSH_KEY_INSTALLER_OS__%OS%__$env:OS' 2>&1) || {
+    # ssh must not consume the remaining installer when invoked as curl | sh.
+    _probe=$(run_ssh 'echo __SSH_KEY_INSTALLER_OS__%OS%__$env:OS' </dev/null 2>&1) || {
         say "$_probe"
         die 'could not detect the remote operating system'
     }
@@ -284,7 +286,7 @@ printf 'SSH_KEY_INSTALLER_PATH=%s\n' "\$key_file"
 EOF
 )
     _script_b64=$(printf '%s\n' "$_script" | base64 | tr -d '\n')
-    run_ssh "echo $_script_b64|base64 -d|sh" || die "SSH failed with exit code $?"
+    run_ssh "echo $_script_b64|base64 -d|sh" </dev/null || die "SSH failed with exit code $?"
 }
 
 build_windows_script() {
