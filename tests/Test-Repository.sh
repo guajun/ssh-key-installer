@@ -83,6 +83,10 @@ done
 printf '%s\n' "$last" >> "$STUB_LOG"
 case $last in
     *'-Command -') cat > "$STUB_STDIN" ;;
+    *) cat >/dev/null ;;
+esac
+case $last in
+    *__SSH_KEY_INSTALLER_OS__*) printf 'Windows_NT\n'; exit 0 ;;
 esac
 printf 'SSH_KEY_LOGIN_OK\n'
 exit 0
@@ -162,4 +166,18 @@ printf '%s\n' "$expected_key" > "$tmp/expected"
 cmp "$auth" "$tmp/expected" || fail 'Linux payload added an empty first line'
 
 printf 'Behaviour checks passed\n'
+
+# SSH reads stdin by default. When the installer arrives on a pipe, neither
+# detection nor installation nor verification may consume its remaining code.
+for target in windows linux auto; do
+    rm -f "$tmp/completed"
+    {
+        cat "$sh_script"
+        printf '\nprintf completed > "$STUB_COMPLETED"\n'
+    } | STUB_COMPLETED="$tmp/completed" sh -s -- -d test@stub -o "$target" \
+        >"$tmp/piped-output" 2>&1 || fail "piped $target install failed"
+    grep -q 'Done. Key login is working:' "$tmp/piped-output" \
+        || fail "piped $target install silently exited before completion"
+    [ -f "$tmp/completed" ] || fail "piped $target install consumed remaining stdin"
+done
 printf 'POSIX_TESTS_OK\n'
