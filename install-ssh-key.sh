@@ -59,7 +59,7 @@ die() {
 # Reads one line from the terminal even when the script itself arrived on stdin.
 ask() {
     printf '%s' "$1" >&2
-    if [ -r /dev/tty ]; then
+    if ( : < /dev/tty ) 2>/dev/null; then
         IFS= read -r _answer < /dev/tty || _answer=''
     else
         IFS= read -r _answer || _answer=''
@@ -321,11 +321,13 @@ PSEOF
 
 install_windows_key() {
     # Windows PowerShell 5.1 is always present on OpenSSH for Windows targets.
-    # The payload is base64 so neither cmd nor PowerShell can rewrite it, and it
-    # contains no $ characters, so no shell expands anything on the way in.
+    # The script is streamed on stdin instead of the command line: the target's
+    # default shell (cmd, PowerShell 5.1, or PowerShell 7) would otherwise strip
+    # quotes from a -Command argument, and PowerShell 7 rewrites native arguments
+    # anyway. "-Command -" has no quoting to get wrong.
     _script=$(build_windows_script | sed "s|@@KEY_BASE64@@|$(printf '%s' "$PUBLIC_KEY" | base64 | tr -d '\n')|")
-    _script_b64=$(printf '%s\n' "$_script" | base64 | tr -d '\n')
-    run_ssh "powershell.exe -NoLogo -NonInteractive -NoProfile -Command \"[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('$_script_b64')) | Invoke-Expression\"" || die "SSH failed with exit code $?"
+    printf '%s\n' "$_script" | run_ssh 'powershell.exe -NoLogo -NonInteractive -NoProfile -Command -' \
+        || die "SSH failed with exit code $?"
 }
 
 if [ "$TARGET_OS" = 'Auto' ] || [ -z "$TARGET_OS" ]; then

@@ -41,7 +41,7 @@ for marker in \
     'BatchMode=yes' \
     'FromBase64String' \
     'administrators_authorized_keys' \
-    'neither cmd nor PowerShell'
+    'Command -'
 do
     grep -qF "$marker" "$sh_script" || fail "install-ssh-key.sh is missing marker: $marker"
 done
@@ -72,6 +72,9 @@ for argument in "$@"; do
     last=$argument
 done
 printf '%s\n' "$last" >> "$STUB_LOG"
+case $last in
+    *'-Command -') cat > "$STUB_STDIN" ;;
+esac
 printf 'SSH_KEY_LOGIN_OK\n'
 exit 0
 STUB
@@ -79,6 +82,7 @@ chmod +x "$tmp/bin/ssh"
 
 export STUB_IDENTITY="$tmp/home/.ssh/id_ed25519"
 export STUB_LOG="$tmp/calls.log"
+export STUB_STDIN="$tmp/windows-stdin.ps1"
 export HOME="$tmp/home"
 export PATH="$tmp/bin:$PATH"
 
@@ -87,19 +91,20 @@ sh "$sh_script" -d test@stub -o linux >/dev/null 2>&1 || fail 'install-ssh-key.s
 
 expected_key=$(tr -d '\r' < "$tmp/home/.ssh/id_ed25519.pub")
 
-windows_command=$(grep -F 'FromBase64String' "$STUB_LOG" | head -1)
-windows_payload=$(printf '%s' "$windows_command" | sed -nE "s/.*FromBase64String\('([^']+)'\).*/\1/p")
-[ -n "$windows_payload" ] || fail 'the Windows payload is not a base64 argument'
-
-printf '%s' "$windows_payload" | base64 -d > "$tmp/windows.ps1" 2>/dev/null \
-    || fail 'the Windows payload is not valid base64'
-grep -qF 'SSH_KEY_INSTALLER_OK=Windows' "$tmp/windows.ps1" || fail 'the Windows payload lost its completion marker'
-if printf '%s' "$windows_command" | grep -q '\$'; then
-    fail 'the Windows remote command must not contain $, which shells would expand'
+windows_command=$(grep -F 'Command -' "$STUB_LOG" | head -1)
+[ -n "$windows_command" ] || fail 'the Windows payload is not streamed on stdin (-Command -)'
+if printf '%s' "$windows_command" | grep -q '"'; then
+    fail 'the Windows remote command must not contain quotes, which target shells mangle'
 fi
-
-path_argument=$(grep -F 'authorized_keys' "$tmp/windows.ps1" | head -1)
-[ -n "$path_argument" ] || fail 'the Windows payload does not touch authorized_keys'
+if printf '%s' "$windows_command" | grep -q '\$'; then
+    fail 'the Windows remote command must not contain $, which target shells expand'
+fi
+[ -s "$STUB_STDIN" ] || fail 'the Windows payload was not sent on stdin'
+grep -qF 'SSH_KEY_INSTALLER_OK=Windows' "$STUB_STDIN" || fail 'the Windows payload lost its completion marker'
+grep -qF 'FromBase64String' "$STUB_STDIN" || fail 'the Windows payload does not decode the key from base64'
+if grep -qF '$key = ' "$STUB_STDIN" && ! grep -qF "[Text.Encoding]::UTF8.GetString" "$STUB_STDIN"; then
+    fail 'the Windows payload does not carry a base64 key'
+fi
 
 linux_command=$(grep -F 'base64 -d|sh' "$STUB_LOG" | head -1)
 linux_payload=$(printf '%s' "$linux_command" | sed -nE 's/^echo ([A-Za-z0-9+/=]+)\|base64 -d\|sh$/\1/p')
