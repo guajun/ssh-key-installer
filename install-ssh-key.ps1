@@ -226,13 +226,13 @@ function Install-WindowsKey([string[]]$SshArguments, [string]$PublicKey) {
 function Add-SshKey([string]`$Path) {
     `$parent = Split-Path -Parent `$Path
     New-Item -ItemType Directory -Force -Path `$parent | Out-Null
-    if (-not (Test-Path -LiteralPath `$Path)) {
-        New-Item -ItemType File -Force -Path `$Path | Out-Null
+    `$text = if (Test-Path -LiteralPath `$Path) { [IO.File]::ReadAllText(`$Path) } else { '' }
+    if (`$text.Contains(`$key)) {
+        return
     }
-    `$lines = @(Get-Content -LiteralPath `$Path -ErrorAction SilentlyContinue)
-    if (`$lines -notcontains `$key) {
-        Add-Content -LiteralPath `$Path -Value `$key -Encoding ascii
-    }
+    # OpenSSH ignores a key that is glued to the previous line, so never join two keys.
+    if (`$text -and -not `$text.EndsWith("``n")) { `$text += "``n" }
+    [IO.File]::WriteAllText(`$Path, `$text + `$key + "``n")
 }
 
 `$userAuth = Join-Path `$env:USERPROFILE '.ssh\authorized_keys'

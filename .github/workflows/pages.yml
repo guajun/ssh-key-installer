@@ -27,6 +27,7 @@ jobs:
           mkdir _site
           cp -R docs/. _site/
           cp install-ssh-key.ps1 _site/install.ps1
+          cp install-ssh-key.sh _site/install.sh
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
